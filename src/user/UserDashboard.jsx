@@ -57,7 +57,7 @@ export default function UserDashboard() {
             <a href="#services" className="ud-nav-link">Services</a>
             <a href="#pricing" className="ud-nav-link">Pricing</a>
             <a href="#contact" className="ud-nav-link">Contact</a>
-             <a href="#track_Order" className="ud-nav-link">Track Order</a>
+            <a href="/track-order" className="ud-nav-link">Track Order</a>
             <a href="/login" className="ud-nav-cta">Admin Login</a>
           </nav>
         </div>
