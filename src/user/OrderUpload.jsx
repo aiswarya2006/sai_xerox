@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import './OrderUpload.css';
 import { Upload, FileText, Image, CheckCircle, ArrowRight, X } from 'lucide-react';
+import { submitOrder } from '../api/orderApi'; // adjust path if needed
 
 export default function OrderUpload() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [formData, setFormData] = useState({
     phone: '',
     contentType: 'pdf',
@@ -76,11 +79,33 @@ export default function OrderUpload() {
     return total;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setAttemptedSubmit(true);
+    setErrorMessage('');
+
     if (!isFormValid()) return;
-    window.location.href = '/payment';
+
+    setIsLoading(true);
+
+    try {
+      const response = await submitOrder(formData, uploadedFiles);
+
+      // On success → go to payment page with order details
+      window.location.href = `/payment?orderId=${response.orderId}&total=${response.totalPrice}`;
+    } catch (error) {
+      if (error.response) {
+        // Server responded with error (4xx, 5xx)
+        setErrorMessage(error.response.data.error || 'Server error. Please try again.');
+      } else if (error.request) {
+        // No response — Spring Boot not running
+        setErrorMessage('Cannot connect to server. Make sure Spring Boot is running on port 8080.');
+      } else {
+        setErrorMessage('Something went wrong. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -456,13 +481,20 @@ export default function OrderUpload() {
             </div>
             <button
               type="submit"
-              disabled={!isFormValid()}
+              disabled={!isFormValid() || isLoading}
               className="ou-summary-cta"
             >
-              Proceed to Payment
-              <ArrowRight size={24} />
+              {isLoading ? 'Submitting...' : 'Proceed to Payment'}
+              {!isLoading && <ArrowRight size={24} />}
             </button>
-            {attemptedSubmit && !isFormValid() && (
+
+            {/* Show backend error */}
+            {errorMessage && (
+              <p className="ou-summary-error">{errorMessage}</p>
+            )}
+
+            {/* Show validation error */}
+            {attemptedSubmit && !isFormValid() && !errorMessage && (
               <p className="ou-summary-error">Please upload files and complete all required fields.</p>
             )}
           </div>
