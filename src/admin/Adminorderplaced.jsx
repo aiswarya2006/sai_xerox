@@ -1,92 +1,65 @@
-import React, { useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import "./Adminorderplaced.css";
-import { Printer, FileDown, Filter, CheckCircle, Clock } from "lucide-react";
+import { Printer, CheckCircle, Clock } from "lucide-react";
 
 export default function Adminorderplaced() {
-  const [orders, setOrders] = useState([
-    {
-      id: "SX-2031",
-      customer: "Karthik",
-      service: "Color Printing",
-      pages: 24,
-      total: "Rs 192",
-      phone: "+91 98765 43210",
-      paperSize: "A4",
-      binding: "Spiral",
-      copies: 2,
-      fileName: "thesis-chapter-2.pdf",
-      status: "Completed",
-    },
-    {
-      id: "SX-2032",
-      customer: "Divya",
-      service: "B/W Xerox",
-      pages: 80,
-      total: "Rs 80",
-      phone: "+91 91234 56789",
-      paperSize: "A4",
-      binding: "None",
-      copies: 1,
-      fileName: "assignment-bw.pdf",
-      status: "Pending",
-    },
-    {
-      id: "SX-2033",
-      customer: "Hari",
-      service: "Binding + Print",
-      pages: 60,
-      total: "Rs 220",
-      phone: "+91 97890 12345",
-      paperSize: "A3",
-      binding: "Calico",
-      copies: 3,
-      fileName: "project-report.pdf",
-      status: "Completed",
-    },
-  ]);
-
+  const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [sortBy, setSortBy] = useState("LATEST");
 
+  // FETCH ORDERS FROM SPRING BOOT
+  useEffect(() => {
+    fetch("http://localhost:8080/api/orders")
+      .then((res) => res.json())
+      .then((data) => {
+        setOrders(data);
+      })
+      .catch((err) => console.error("Failed to fetch orders:", err));
+  }, []);
+
+  // UPDATE STATUS IN BACKEND
   const handleStatusChange = (orderId, nextStatus) => {
-    setOrders((prev) =>
-      prev.map((order) =>
-        order.id === orderId ? { ...order, status: nextStatus } : order
-      )
-    );
+    fetch(`http://localhost:8080/api/orders/${orderId}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: nextStatus.toUpperCase() }),
+    })
+      .then((res) => res.json())
+      .then((updated) => {
+        setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
+      });
   };
 
   const handlePrint = (order) => {
-    const popup = window.open("", "_blank", "width=900,height=700");
-    if (!popup) return;
-    popup.document.write(`
-      <html>
-        <head>
-          <title>Print files</title>
-          <style>
-            body { font-family: "Segoe UI", sans-serif; margin: 24px; color: #111827; }
-            h1 { font-size: 20px; margin-bottom: 8px; }
-            p { margin: 6px 0; }
-            ul { padding-left: 18px; }
-            .meta { color: #6b7280; font-size: 13px; margin-bottom: 16px; }
-          </style>
-        </head>
-        <body>
-          <h1>Uploaded files</h1>
-          <div class="meta">Order ${order.id} • ${order.customer}</div>
-          <ul>
-            <li>${order.fileName}</li>
-          </ul>
-          <p><strong>Paper Size:</strong> ${order.paperSize}</p>
-          <p><strong>Binding:</strong> ${order.binding}</p>
-          <p><strong>Copies:</strong> ${order.copies}</p>
-          <p class="meta">Note: Connect file preview/download to print actual documents.</p>
-        </body>
-      </html>
-    `);
-    popup.document.close();
-    popup.focus();
-    popup.print();
+    const file = order.fileNames.split(",")[0];
+    const url = `http://localhost:8080/api/orders/file/${encodeURIComponent(file)}`;
+
+    // open file directly
+    const win = window.open(url, "_blank");
+
+    // optional auto print after load
+    if (win) {
+      win.onload = () => {
+        win.print();
+      };
+    }
   };
+
+  const filteredOrders = [...orders]
+    .filter((o) => {
+      const statusMatch = statusFilter === "ALL" || o.status === statusFilter;
+      const typeMatch = typeFilter === "ALL" || o.printType === typeFilter;
+      return statusMatch && typeMatch;
+    })
+    .sort((a, b) => {
+      if (sortBy === "LATEST") return b.id - a.id;
+      if (sortBy === "OLDEST") return a.id - b.id;
+      if (sortBy === "PRICE_HIGH") return b.totalPrice - a.totalPrice;
+      if (sortBy === "PRICE_LOW") return a.totalPrice - b.totalPrice;
+      return 0;
+    });
 
   return (
     <div className="admin-orders">
@@ -100,65 +73,50 @@ export default function Adminorderplaced() {
             <h1>Order Management</h1>
           </div>
         </div>
+
         <div className="admin-orders__actions">
-          <button className="admin-orders__ghost">
-            <Filter size={16} />
-            Filters
-          </button>
-          <button className="admin-orders__export" onClick={() => window.print()}>
-            <FileDown size={16} />
-            Export
+          <button
+            className="admin-orders__ghost admin-orders__back-btn"
+            onClick={() => (window.location.href = "/")}
+          >
+            ← Back to Home
           </button>
         </div>
       </header>
 
       <section className="admin-orders__table-card">
-        <div className="admin-orders__table-head">
-          <p>Latest orders</p>
-          <span className="admin-orders__updated">
-            Updated just now
-            <button
-              className="admin-orders__refresh"
-              type="button"
-              title="Refresh"
-              aria-label="Refresh"
-            >
-              <svg
-                className="admin-orders__refresh-icon"
-                viewBox="0 0 24 24"
-                width="16"
-                height="16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="23 4 23 10 17 10" />
-                <polyline points="1 20 1 14 7 14" />
-                <path d="M3.51 9a9 9 0 0114.13-3.36L23 10" />
-                <path d="M20.49 15a9 9 0 01-14.13 3.36L1 14" />
-              </svg>
-            </button>
-          </span>
-        </div>
-
         <div className="admin-orders__filters">
           <label>
             Status
-            <select>
-              <option>All</option>
-              <option>Completed</option>
-              <option>Pending</option>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="ALL">All</option>
+              <option value="PENDING">Pending</option>
+              <option value="COMPLETED">Completed</option>
             </select>
           </label>
+
           <label>
-            Service
-            <select>
-              <option>All services</option>
-              <option>Color Printing</option>
-              <option>B/W Xerox</option>
-              <option>Binding</option>
+            Print Type
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+            >
+              <option value="ALL">All</option>
+              <option value="color">Color</option>
+              <option value="bw">B/W</option>
+            </select>
+          </label>
+
+          <label>
+            Sort
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="LATEST">Latest</option>
+              <option value="OLDEST">Oldest</option>
+              <option value="PRICE_HIGH">Price High</option>
+              <option value="PRICE_LOW">Price Low</option>
             </select>
           </label>
         </div>
@@ -168,41 +126,53 @@ export default function Adminorderplaced() {
             <thead>
               <tr>
                 <th>Order ID</th>
-                <th>Customer</th>
-                <th>Service</th>
-                <th>Pages</th>
+                <th>Print Type</th>
                 <th>Total</th>
                 <th>Phone</th>
                 <th>Paper Size</th>
                 <th>Binding</th>
                 <th>Copies</th>
-                <th>File</th>
+                <th>Files</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
             </thead>
+
             <tbody>
-              {orders.map((order) => {
-                const isCompleted = order.status === "Completed";
+              {filteredOrders.map((order) => {
+                const isCompleted = order.status === "COMPLETED";
+
                 return (
                   <tr key={order.id}>
                     <td>{order.id}</td>
-                    <td>{order.customer}</td>
-                    <td>{order.service}</td>
-                    <td>{order.pages}</td>
-                    <td>{order.total}</td>
+                    <td>{order.printType}</td>
+                    <td>₹{order.totalPrice}</td>
                     <td>{order.phone}</td>
                     <td>{order.paperSize}</td>
                     <td>{order.binding}</td>
                     <td>{order.copies}</td>
+
                     <td>
-                      <button
-                        className="admin-orders__file"
-                        onClick={() => setSelectedOrder(order)}
-                      >
-                        View file
-                      </button>
+                      {(() => {
+                        const file = order.fileNames?.split(",")[0];
+
+                        return (
+                          <span
+                            className="admin-orders__file-name"
+                            style={{ cursor: "pointer", color: "#2563eb", fontWeight: 500 }}
+                            onClick={() =>
+                              window.open(
+                                `http://localhost:8080/api/orders/file/${encodeURIComponent(file)}`,
+                                "_blank"
+                              )
+                            }
+                          >
+                            {file}
+                          </span>
+                        );
+                      })()}
                     </td>
+
                     <td>
                       <div
                         className={`admin-orders__status-pill ${
@@ -211,28 +181,20 @@ export default function Adminorderplaced() {
                             : "admin-orders__status--pending"
                         }`}
                       >
-                        {isCompleted ? (
-                          <CheckCircle size={14} />
-                        ) : (
-                          <Clock size={14} />
-                        )}
+                        {isCompleted ? <CheckCircle size={14} /> : <Clock size={14} />}
+
                         <select
-                          className="admin-orders__status-select"
                           value={order.status}
-                          onChange={(event) =>
-                            handleStatusChange(order.id, event.target.value)
-                          }
+                          onChange={(e) => handleStatusChange(order.id, e.target.value)}
                         >
-                          <option>Completed</option>
-                          <option>Pending</option>
+                          <option value="PENDING">Pending</option>
+                          <option value="COMPLETED">Completed</option>
                         </select>
                       </div>
                     </td>
+
                     <td>
-                      <button
-                        className="admin-orders__print"
-                        onClick={() => setSelectedOrder(order)}
-                      >
+                      <button className="admin-orders__print" onClick={() => handlePrint(order)}>
                         Print
                       </button>
                     </td>
@@ -245,56 +207,11 @@ export default function Adminorderplaced() {
       </section>
 
       {selectedOrder && (
-        <div
-          className="admin-orders__modal-backdrop"
-          onClick={() => setSelectedOrder(null)}
-        >
-          <div
-            className="admin-orders__modal"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="admin-orders__modal-header">
-              <h2>Print order {selectedOrder.id}</h2>
-              <button
-                className="admin-orders__modal-close"
-                onClick={() => setSelectedOrder(null)}
-              >
-                Close
-              </button>
-            </div>
-            <div className="admin-orders__modal-body">
-              <div className="admin-orders__file-card">
-                <div>
-                  <p className="admin-orders__file-label">Uploaded file</p>
-                  <p className="admin-orders__file-name">
-                    {selectedOrder.fileName}
-                  </p>
-                </div>
-                <button className="admin-orders__file-preview">
-                  Preview
-                </button>
-              </div>
-              <div className="admin-orders__print-options">
-                <div>
-                  <p className="admin-orders__option-label">Paper size</p>
-                  <p>{selectedOrder.paperSize}</p>
-                </div>
-                <div>
-                  <p className="admin-orders__option-label">Binding</p>
-                  <p>{selectedOrder.binding}</p>
-                </div>
-                <div>
-                  <p className="admin-orders__option-label">Copies</p>
-                  <p>{selectedOrder.copies}</p>
-                </div>
-              </div>
-              <button
-                className="admin-orders__print-primary"
-                onClick={() => handlePrint(selectedOrder)}
-              >
-                Send to printer
-              </button>
-            </div>
+        <div className="admin-orders__modal-backdrop" onClick={() => setSelectedOrder(null)}>
+          <div className="admin-orders__modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Files</h3>
+            <p>{selectedOrder.fileNames}</p>
+            <button onClick={() => setSelectedOrder(null)}>Close</button>
           </div>
         </div>
       )}

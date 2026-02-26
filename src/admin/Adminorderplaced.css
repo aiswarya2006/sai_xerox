@@ -98,6 +98,12 @@ body {
   border-color: rgba(37, 99, 235, 0.45);
 }
 
+.admin-orders__back-btn {
+  min-width: 150px;
+  justify-content: center;
+  white-space: nowrap;
+}
+
 .admin-orders__table-card {
   background: var(--white);
   border-radius: 24px;
@@ -436,3 +442,5 @@ body {
     display: none;
   }
 }
+
+
