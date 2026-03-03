@@ -151,24 +151,38 @@ export default function Adminorderplaced() {
                     <td>{order.paperSize}</td>
                     <td>{order.binding}</td>
                     <td>{order.copies}</td>
-
                     <td>
                       {(() => {
                         const file = order.fileNames?.split(",")[0];
+                        if (!file) return null;
+
+                        const displayName =
+                          file.includes("_")
+                            ? file.substring(file.indexOf("_") + 1)
+                            : file;
 
                         return (
-                          <span
-                            className="admin-orders__file-name"
-                            style={{ cursor: "pointer", color: "#2563eb", fontWeight: 500 }}
-                            onClick={() =>
-                              window.open(
-                                `http://localhost:8080/api/orders/file/${encodeURIComponent(file)}`,
-                                "_blank"
-                              )
-                            }
-                          >
-                            {file}
-                          </span>
+                          <div>
+                            <span
+                              style={{ cursor: "pointer", color: "#2563eb", fontWeight: 500 }}
+                              onClick={() =>
+                                window.open(
+                                  `http://localhost:8080/api/orders/file/${encodeURIComponent(
+                                    file
+                                  )}`,
+                                  "_blank"
+                                )
+                              }
+                            >
+                              {displayName}
+                            </span>
+
+                            {order.description && (
+                              <div style={{ fontSize: "12px", color: "#666", marginTop: "4px" }}>
+                                {order.description}
+                              </div>
+                            )}
+                          </div>
                         );
                       })()}
                     </td>

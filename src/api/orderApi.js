@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api';
-
+const API_BASE_URL = 'http://localhost:8080/api/orders';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -19,36 +18,36 @@ export const submitOrder = async (formData, uploadedFiles) => {
   data.append('binding',     formData.binding);
   data.append('description', formData.description || '');
 
-  // Append each file
   uploadedFiles.forEach(f => data.append('files', f.file));
 
-  const response = await api.post('/orders', data, {
+  // 🔥 FIXED HERE (removed /orders)
+  const response = await api.post('', data, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
 
-  return response.data; // { orderId, totalPrice, status, message }
+  return response.data;
 };
 
 // Get single order by ID
 export const getOrderById = async (orderId) => {
-  const response = await api.get(`/orders/${orderId}`);
+  const response = await api.get(`/${orderId}`);
   return response.data;
 };
 
-// Get all orders (admin)
+// Get all orders
 export const getAllOrders = async () => {
-  const response = await api.get('/orders');
+  const response = await api.get('');
   return response.data;
 };
 
-// Get orders by phone number
+// Get orders by phone
 export const getOrdersByPhone = async (phone) => {
-  const response = await api.get(`/orders/phone/${phone}`);
+  const response = await api.get(`/phone/${phone}`);
   return response.data;
 };
 
 // Update order status
 export const updateOrderStatus = async (orderId, status) => {
-  const response = await api.patch(`/orders/${orderId}/status`, { status });
+  const response = await api.patch(`/${orderId}/status`, { status });
   return response.data;
 };
