@@ -10,28 +10,116 @@ export default function Adminorderplaced() {
   const [sortBy, setSortBy] = useState("LATEST");
 
   // FETCH ORDERS FROM SPRING BOOT
-  useEffect(() => {
-    fetch("http://localhost:8080/api/orders")
+  // useEffect(() => {
+  //   fetch("http://localhost:8080/api/orders")
+  //     .then((res) => res.json())
+  //     .then((data) => {
+  //       setOrders(data);
+  //     })
+  //     .catch((err) => console.error("Failed to fetch orders:", err));
+  // }, []);
+//   useEffect(() => {
+
+//   const token = localStorage.getItem("token");
+
+//   if (!token) {
+//     window.location.href = "/login";
+//     return;
+//   }
+
+//   fetch("http://localhost:8080/api/orders")
+//     .then((res) => res.json())
+//     .then((data) => {
+//       setOrders(data);
+//     })
+//     .catch((err) => console.error("Failed to fetch orders:", err));
+
+// }, []);
+
+useEffect(() => {
+
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    window.location.href = "/login";
+    return;
+  }
+
+  let logoutTimer;
+
+  const resetTimer = () => {
+    clearTimeout(logoutTimer);
+    logoutTimer = setTimeout(() => {
+      localStorage.removeItem("token");
+      alert("Session expired. Please login again.");
+      window.location.href = "/login";
+    }, 15 * 60 * 1000);
+  };
+
+  window.addEventListener("mousemove", resetTimer);
+  window.addEventListener("keydown", resetTimer);
+
+  resetTimer();
+
+  // 🔹 FUNCTION TO FETCH ORDERS
+  const fetchOrders = () => {
+    fetch("http://localhost:8080/api/orders", {
+      headers: {
+        Authorization: token
+      }
+    })
       .then((res) => res.json())
       .then((data) => {
         setOrders(data);
       })
       .catch((err) => console.error("Failed to fetch orders:", err));
-  }, []);
-
-  // UPDATE STATUS IN BACKEND
-  const handleStatusChange = (orderId, nextStatus) => {
-    fetch(`http://localhost:8080/api/orders/${orderId}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: nextStatus.toUpperCase() }),
-    })
-      .then((res) => res.json())
-      .then((updated) => {
-        setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
-      });
   };
 
+  // first load
+  fetchOrders();
+
+  // 🔹 AUTO REFRESH EVERY 5 SECONDS
+  const interval = setInterval(fetchOrders, 5000);
+
+  return () => {
+    window.removeEventListener("mousemove", resetTimer);
+    window.removeEventListener("keydown", resetTimer);
+    clearTimeout(logoutTimer);
+    clearInterval(interval);
+  };
+
+}, []);
+const handleLogout = () => {
+  localStorage.removeItem("token");
+  window.location.href = "/login";
+};
+  // UPDATE STATUS IN BACKEND
+  // const handleStatusChange = (orderId, nextStatus) => {
+  //   fetch(`http://localhost:8080/api/orders/${orderId}/status`, {
+  //     method: "PATCH",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({ status: nextStatus.toUpperCase() }),
+  //   })
+  //     .then((res) => res.json())
+  //     .then((updated) => {
+  //       setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
+  //     });
+  // };
+
+  const handleStatusChange = (orderId, nextStatus) => {
+  fetch(`http://localhost:8080/api/orders/${orderId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: localStorage.getItem("token")
+    },
+    body: JSON.stringify({ status: nextStatus.toUpperCase() })
+  })
+    .then((res) => res.json())
+    .then((updated) => {
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
+    });
+};
   const handlePrint = (order) => {
     const file = order.fileNames.split(",")[0];
     const url = `http://localhost:8080/api/orders/file/${encodeURIComponent(file)}`;
@@ -75,6 +163,9 @@ export default function Adminorderplaced() {
         </div>
 
         <div className="admin-orders__actions">
+          <button className="admin-orders__ghost" onClick={handleLogout}>
+            Logout
+          </button>
           <button
             className="admin-orders__ghost admin-orders__back-btn"
             onClick={() => (window.location.href = "/")}
@@ -163,7 +254,7 @@ export default function Adminorderplaced() {
 
                         return (
                           <div>
-                            <span
+                            {/* <span
                               style={{ cursor: "pointer", color: "#2563eb", fontWeight: 500 }}
                               onClick={() =>
                                 window.open(
@@ -175,7 +266,25 @@ export default function Adminorderplaced() {
                               }
                             >
                               {displayName}
-                            </span>
+                            </span> */}
+                            <span
+  style={{ cursor: "pointer", color: "#2563eb", fontWeight: 500 }}
+  onClick={() => {
+    fetch(`http://localhost:8080/api/orders/file/${encodeURIComponent(file)}`, {
+      headers: {
+        Authorization: localStorage.getItem("token")
+      }
+    })
+      .then((res) => res.blob())
+      .then((blob) => {
+        const url = window.URL.createObjectURL(blob);
+        window.open(url);
+      })
+      .catch((err) => console.error("File fetch failed:", err));
+  }}
+>
+  {displayName}
+</span>
 
                             {order.description && (
                               <div style={{ fontSize: "12px", color: "#666", marginTop: "4px" }}>
