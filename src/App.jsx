@@ -37,6 +37,8 @@ import { Routes, Route } from "react-router-dom";
 
 import UserDashboard from "./user/UserDashboard";
 import OrderUpload from "./user/OrderUpload";
+import Payment from "./user/Payment";
+import PaymentComplete from "./user/Payment_complete";
 import Trackorder from "./user/Trackorder";
 
 import AdminLogin from "./admin/Adminlogin";
@@ -51,6 +53,10 @@ function App() {
       <Route path="/" element={<UserDashboard />} />
       
       <Route path="/order" element={<OrderUpload />} />
+
+      <Route path="/payment" element={<Payment />} />
+
+      <Route path="/payment-complete" element={<PaymentComplete />} />
       
       <Route path="/track-order" element={<Trackorder />} />
       

@@ -64,9 +64,12 @@ useEffect(() => {
   // 🔹 FUNCTION TO FETCH ORDERS
   const fetchOrders = () => {
     fetch("http://localhost:8080/api/orders", {
+      // headers: {
+      //   Authorization: token
+      // }
       headers: {
-        Authorization: token
-      }
+  Authorization: `Bearer ${token}`
+}
     })
       .then((res) => res.json())
       .then((data) => {
@@ -111,7 +114,8 @@ const handleLogout = () => {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: localStorage.getItem("token")
+      // Authorization: localStorage.getItem("token")
+      Authorization: `Bearer ${localStorage.getItem("token")}`
     },
     body: JSON.stringify({ status: nextStatus.toUpperCase() })
   })
@@ -120,20 +124,39 @@ const handleLogout = () => {
       setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
     });
 };
-  const handlePrint = (order) => {
-    const file = order.fileNames.split(",")[0];
-    const url = `http://localhost:8080/api/orders/file/${encodeURIComponent(file)}`;
+const handlePrint = (order) => {
+  const file = order.fileNames.split(",")[0];
 
-    // open file directly
-    const win = window.open(url, "_blank");
-
-    // optional auto print after load
-    if (win) {
-      win.onload = () => {
-        win.print();
-      };
+  fetch(
+    `http://localhost:8080/api/orders/file/${encodeURIComponent(file)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`
+      }
     }
-  };
+  )
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error("Unauthorized");
+      }
+
+      return res.blob();
+    })
+    .then((blob) => {
+      const fileURL = URL.createObjectURL(blob);
+      const printWindow = window.open(fileURL);
+
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
+    })
+    .catch((err) => {
+      console.error("Print failed:", err);
+      alert("Unable to print file");
+    });
+};
 
   const filteredOrders = [...orders]
     .filter((o) => {
@@ -216,13 +239,14 @@ const handleLogout = () => {
           <table className="admin-orders__table">
             <thead>
               <tr>
-                <th>Order ID</th>
+                <th>Tracking ID</th>
                 <th>Print Type</th>
                 <th>Total</th>
                 <th>Phone</th>
                 <th>Paper Size</th>
                 <th>Binding</th>
                 <th>Copies</th>
+                <th>Submitted Time</th>
                 <th>Files</th>
                 <th>Status</th>
                 <th>Action</th>
@@ -235,13 +259,19 @@ const handleLogout = () => {
 
                 return (
                   <tr key={order.id}>
-                    <td>{order.id}</td>
+                    <td>{order.trackId}</td>
                     <td>{order.printType}</td>
                     <td>₹{order.totalPrice}</td>
                     <td>{order.phone}</td>
                     <td>{order.paperSize}</td>
                     <td>{order.binding}</td>
                     <td>{order.copies}</td>
+                    <td>
+                      {new Date(order.createdAt).toLocaleString("en-IN", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </td>
                     <td>
                       {(() => {
                         const file = order.fileNames?.split(",")[0];
@@ -272,7 +302,7 @@ const handleLogout = () => {
   onClick={() => {
     fetch(`http://localhost:8080/api/orders/file/${encodeURIComponent(file)}`, {
       headers: {
-        Authorization: localStorage.getItem("token")
+        Authorization: `Bearer ${localStorage.getItem("token")}`
       }
     })
       .then((res) => res.blob())

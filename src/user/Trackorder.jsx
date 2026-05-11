@@ -358,9 +358,12 @@ export default function Trackorder() {
 
     try {
 
-      const response = await fetch(
-  `http://localhost:8080/api/orders/track-order?phone=${phone}`
-);
+      const response = await
+//        fetch(
+//   `http://localhost:8080/api/orders/track-order?phone=${phone}`
+// );
+
+fetch(`http://localhost:8080/api/orders/phone/${phone}`);
 
       if (!response.ok) {
         throw new Error("Order not found");

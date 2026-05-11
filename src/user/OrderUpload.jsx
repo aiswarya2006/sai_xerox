@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './OrderUpload.css';
 import { Upload, FileText, Image, CheckCircle, ArrowRight, X } from 'lucide-react';
 import { submitOrder } from '../api/orderApi'; // adjust path if needed
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 export default function OrderUpload() {
+  const navigate = useNavigate();
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -18,14 +24,30 @@ export default function OrderUpload() {
     description: ''
   });
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
-    const newFiles = files.map((file) => ({
-      name: file.name,
-      size: (file.size / 1024).toFixed(2) + ' KB',
-      file: file
-    }));
-    setUploadedFiles([...uploadedFiles, ...newFiles]);
+    const newFiles = await Promise.all(
+      files.map(async (file) => {
+        let pages = 1;
+
+        if (file.type === 'application/pdf') {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({
+            data: arrayBuffer
+          }).promise;
+          pages = pdf.numPages;
+        }
+
+        return {
+          name: file.name,
+          size: (file.size / 1024).toFixed(2) + ' KB',
+          file,
+          pages
+        };
+      })
+    );
+
+    setUploadedFiles((prev) => [...prev, ...newFiles]);
   };
 
   const removeFile = (index) => {
@@ -65,19 +87,17 @@ export default function OrderUpload() {
     return true;
   };
 
-  const calculatePrice = () => {
-    const basePrice = formData.printType === 'color' ? 8 : 1;
-    const bindingPrice =
-      formData.binding === 'spiral'
-        ? 30
-        : formData.binding === 'calico'
-        ? 25
-        : formData.binding === 'hole'
-        ? 5
-        : 0;
-    const total = basePrice * formData.copies * uploadedFiles.length + bindingPrice;
-    return total;
+  const totalPages = uploadedFiles.reduce((sum, file) => sum + (file.pages || 1), 0);
+  const pricePerPage = formData.printType === 'color' ? 8 : 1;
+  const bindingPrices = {
+    none: 0,
+    spiral: 30,
+    calico: 25,
+    hole: 5
   };
+  const bindingPrice = bindingPrices[formData.binding] || 0;
+  const printingTotal = totalPages * Number(formData.copies) * pricePerPage;
+  const total = printingTotal + bindingPrice;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,9 +110,29 @@ export default function OrderUpload() {
 
     try {
       const response = await submitOrder(formData, uploadedFiles);
-
+console.log(response);
+console.log(response.data);
       // On success → go to payment page with order details
-      window.location.href = `/payment?orderId=${response.orderId}&total=${response.totalPrice}`;
+      navigate("/payment", {
+        state: {
+          orderId: response.orderId,
+          trackId: response.trackId || response.data.trackingId,
+          totalPrice: response.totalPrice,
+          phone: formData.phone,
+          pages: totalPages,
+          printType: formData.printType === "color" ? "Color" : "Black & White",
+          copies: formData.copies,
+          binding:
+            formData.binding === "none"
+              ? "No Binding"
+              : formData.binding === "spiral"
+              ? "Spiral"
+              : formData.binding === "calico"
+              ? "Calico"
+              : "Hole Punch",
+          documents: uploadedFiles.length,
+        },
+      });
     } catch (error) {
       if (error.response) {
         // Server responded with error (4xx, 5xx)
@@ -198,6 +238,7 @@ export default function OrderUpload() {
                       <div>
                         <p className="ou-file-name">{file.name}</p>
                         <p className="ou-file-size">{file.size}</p>
+                        <p className="ou-file-size">Pages: {file.pages}</p>
                       </div>
                     </div>
                     <button
@@ -449,10 +490,18 @@ export default function OrderUpload() {
                 <span className="ou-summary-value">{uploadedFiles.length} files</span>
               </div>
               <div className="ou-summary-row">
+                <span>Pages:</span>
+                <span className="ou-summary-value">{totalPages}</span>
+              </div>
+              <div className="ou-summary-row">
                 <span>Print Type:</span>
                 <span className="ou-summary-value">
                   {formData.printType === 'color' ? 'Color' : 'Black & White'}
                 </span>
+              </div>
+              <div className="ou-summary-row">
+                <span>Price/Page:</span>
+                <span className="ou-summary-value">₹{pricePerPage}</span>
               </div>
               <div className="ou-summary-row">
                 <span>Copies:</span>
@@ -474,9 +523,17 @@ export default function OrderUpload() {
                     : 'Hole Punch'}
                 </span>
               </div>
+              <div className="ou-summary-row">
+                <span>Printing:</span>
+                <span className="ou-summary-value">₹{printingTotal}</span>
+              </div>
+              <div className="ou-summary-row">
+                <span>Binding Charge:</span>
+                <span className="ou-summary-value">₹{bindingPrice}</span>
+              </div>
               <div className="ou-summary-total">
                 <span>Total:</span>
-                <span>₹{calculatePrice()}</span>
+                <span>₹{total}</span>
               </div>
             </div>
             <button
