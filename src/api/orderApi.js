@@ -40,9 +40,9 @@ export const getAllOrders = async () => {
   return response.data;
 };
 
-// Get orders by phone
-export const getOrdersByPhone = async (phone) => {
-  const response = await api.get(`/phone/${phone}`);
+// Get single order by Tracking ID
+export const getOrderByTrackingId = async (trackingId) => {
+  const response = await api.get(`/track/${encodeURIComponent(trackingId)}`);
   return response.data;
 };
 

@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useState } from "react";
 import "./Adminorderplaced.css";
-import { Printer, CheckCircle, Clock } from "lucide-react";
+import { BarChart3, CheckCircle, Clock, Home, LogOut, Printer } from "lucide-react";
 
 export default function Adminorderplaced() {
   const [orders, setOrders] = useState([]);
@@ -185,17 +185,39 @@ const handlePrint = (order) => {
           </div>
         </div>
 
-        <div className="admin-orders__actions">
-          <button className="admin-orders__ghost" onClick={handleLogout}>
-            Logout
+        <nav className="admin-orders__nav" aria-label="Admin navigation">
+          <button
+            className="admin-orders__nav-item admin-orders__nav-item--active"
+            type="button"
+          >
+            <Printer size={17} />
+            Orders
           </button>
           <button
-            className="admin-orders__ghost admin-orders__back-btn"
+            className="admin-orders__nav-item"
+            type="button"
+            onClick={() => (window.location.href = "/admin/expense")}
+          >
+            <BarChart3 size={17} />
+            Money Manager
+          </button>
+          <button
+            className="admin-orders__nav-item"
+            type="button"
             onClick={() => (window.location.href = "/")}
           >
-            ← Back to Home
+            <Home size={17} />
+            Home
           </button>
-        </div>
+          <button
+            className="admin-orders__nav-item admin-orders__nav-item--logout"
+            type="button"
+            onClick={handleLogout}
+          >
+            <LogOut size={17} />
+            Logout
+          </button>
+        </nav>
       </header>
 
       <section className="admin-orders__table-card">

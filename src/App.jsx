@@ -43,6 +43,7 @@ import Trackorder from "./user/Trackorder";
 
 import AdminLogin from "./admin/Adminlogin";
 import AdminOrderPlaced from "./admin/Adminorderplaced";
+import AdminExpense from "./admin/AdminExpense";
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -68,6 +69,15 @@ function App() {
         element={
           <ProtectedRoute>
             <AdminOrderPlaced />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/expense"
+        element={
+          <ProtectedRoute>
+            <AdminExpense />
           </ProtectedRoute>
         }
       />
